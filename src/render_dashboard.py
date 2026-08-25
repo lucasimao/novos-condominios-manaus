@@ -127,17 +127,6 @@ def _escape(texto: str) -> str:
     )
 
 
-def _escape_dict_strings(data: dict) -> dict:
-    """Escape HTML in all string values of a dictionary."""
-    result = {}
-    for key, value in data.items():
-        if isinstance(value, str):
-            result[key] = _escape(value)
-        else:
-            result[key] = value
-    return result
-
-
 def render_dashboard(condominios: list[dict], atualizado_em: str | None = None) -> str:
     """Gera o HTML completo do painel a partir da lista consolidada de condominios.
 
@@ -171,9 +160,12 @@ def render_dashboard(condominios: list[dict], atualizado_em: str | None = None) 
             )
         linhas_html_str = "\n      ".join(linhas)
 
-    # Escape HTML entities in all string values before JSON encoding
-    condominios_escaped = [_escape_dict_strings(c) for c in condominios]
-    dados_json = json.dumps(condominios_escaped, ensure_ascii=False)
+    # Serializa os dados brutos (sem escapar) para preservar o estado
+    # persistido byte-a-byte na próxima leitura (ver extract_state.py).
+    # Apenas a sequência "</script" é neutralizada via escape JSON válido
+    # ("\/") para impedir o fechamento prematuro da tag <script>.
+    dados_json = json.dumps(condominios, ensure_ascii=False)
+    dados_json = dados_json.replace("</script", "<\\/script")
 
     return _TEMPLATE.format(
         total=len(condominios),
