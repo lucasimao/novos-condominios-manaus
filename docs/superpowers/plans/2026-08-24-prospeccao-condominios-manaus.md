@@ -418,7 +418,43 @@ def test_escapa_html_nos_campos():
 
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
+
+    # O bloco JSON embutido preserva o dado bruto (sem escapar) — é ele que
+    # extract_state.py lê de volta no mes seguinte. O que impede a quebra da
+    # tag <script id="condo-data"> é a neutralizacao pontual de "</script"
+    # dentro do JSON (ver Step 3), não o escaping do valor do campo.
+    inicio = html.index('id="condo-data">') + len('id="condo-data">')
+    fim = html.index("</script>", inicio)
+    dados = json.loads(html[inicio:fim])
+    assert dados[0]["razao_social"] == "Condominio <script>alert(1)</script>"
+
+
+def test_json_embutido_preserva_caracteres_especiais_sem_escapar():
+    condominio = _condo(razao_social='Solar & Cia "Palmeiras" <Torre>')
+
+    html = render_dashboard([condominio], atualizado_em="24/08/2026")
+
+    inicio = html.index('id="condo-data">') + len('id="condo-data">')
+    fim = html.index("</script>", inicio)
+    dados = json.loads(html[inicio:fim])
+
+    assert dados == [condominio]
+    assert "&amp;" not in dados[0]["razao_social"]
+    assert "&lt;" not in dados[0]["razao_social"]
+    assert "&quot;" not in dados[0]["razao_social"]
 ```
+
+**Nota (achada durante a implementação):** a primeira versão deste código
+mandava `json.dumps(condominios, ensure_ascii=False)` sem qualquer
+neutralização — isso permite que um campo contendo o literal `</script`
+feche prematuramente a tag `<script id="condo-data">` no HTML final (bug
+real de quebra de tag, já que `json.dumps` não escapa `<`/`>`). A correção
+certa é neutralizar **apenas a sequência `</script`** dentro da string JSON
+já serializada (`\/` é um escape JSON válido, decodificado de volta sem
+perdas por `json.loads`) — nunca escapar os valores dos campos antes de
+serializar, porque esse bloco é a única fonte de estado entre execuções
+mensais (ver `extract_state.py`), e escapar os campos corromperia os dados
+cumulativamente a cada mês. Ver Step 3 abaixo, que já reflete a correção.
 
 - [ ] **Step 2: Rodar os testes e confirmar que falham**
 
@@ -590,7 +626,12 @@ def render_dashboard(condominios: list[dict], atualizado_em: str | None = None) 
             )
         linhas_html_str = "\n      ".join(linhas)
 
+    # Serializa os dados brutos (sem escapar) para preservar o estado
+    # persistido byte-a-byte na próxima leitura (ver extract_state.py).
+    # Apenas a sequência "</script" é neutralizada via escape JSON válido
+    # ("\/") para impedir o fechamento prematuro da tag <script>.
     dados_json = json.dumps(condominios, ensure_ascii=False)
+    dados_json = dados_json.replace("</script", "<\\/script")
 
     return _TEMPLATE.format(
         total=len(condominios),
@@ -603,7 +644,7 @@ def render_dashboard(condominios: list[dict], atualizado_em: str | None = None) 
 - [ ] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `.venv/bin/pytest tests/test_render_dashboard.py -v`
-Expected: `5 passed`
+Expected: `6 passed`
 
 - [ ] **Step 5: Commit**
 
@@ -1003,7 +1044,7 @@ Expected: `1 passed`
 - [ ] **Step 5: Rodar a suíte inteira antes de seguir para a implantação**
 
 Run: `.venv/bin/pytest -v`
-Expected: todos os testes das Tarefas 2-6 passam (19 testes no total)
+Expected: todos os testes das Tarefas 2-6 passam (20 testes no total)
 
 - [ ] **Step 6: Commit do código**
 
