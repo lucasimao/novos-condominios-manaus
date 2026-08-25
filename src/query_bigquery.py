@@ -54,7 +54,7 @@ def build_client(credentials_json: str):
 
     info = json.loads(credentials_json)
     credentials = service_account.Credentials.from_service_account_info(
-        info, scopes=["https://www.googleapis.com/auth/bigquery.readonly"]
+        info, scopes=["https://www.googleapis.com/auth/bigquery"]
     )
     return bigquery.Client(project=info["project_id"], credentials=credentials)
 
