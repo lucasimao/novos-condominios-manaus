@@ -1,2 +1,6 @@
-.worktrees/
-.superpowers/
+__pycache__/
+*.pyc
+.venv/
+secrets/
+*.egg-info/
+.pytest_cache/
