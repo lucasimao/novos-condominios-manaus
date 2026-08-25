@@ -40,7 +40,7 @@ usados: `basedosdados.br_me_cnpj.empresas` e
   (logradouro, número, bairro, CEP), telefone(s), e-mail.
 
 **Filtros usados para identificar os condomínios de Manaus:**
-- `natureza_juridica = '3069'` (Condomínio Edilício) — em `empresas`. Este é
+- `natureza_juridica = '3085'` (Condomínio Edilício) — em `empresas`. Este é
   o filtro que garante que o CNPJ é do próprio condomínio, e não de uma
   administradora ou fornecedor (o CNAE "condomínios prediais" sozinho não
   garante isso).
@@ -63,7 +63,7 @@ FROM `basedosdados.br_me_cnpj.estabelecimentos` AS est
 JOIN `basedosdados.br_me_cnpj.empresas` AS emp
   ON est.cnpj_basico = emp.cnpj_basico
 WHERE est.id_municipio = '1302603'
-  AND emp.natureza_juridica = '3069'
+  AND emp.natureza_juridica = '3085'
   AND est.situacao_cadastral = '2'
 ```
 
