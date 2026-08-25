@@ -61,6 +61,11 @@ def test_escapa_html_nos_campos():
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
 
+    inicio = html.index('id="condo-data">') + len('id="condo-data">')
+    fim = html.index("</script>", inicio)
+    dados = json.loads(html[inicio:fim])
+    assert dados[0]["razao_social"] == "Condominio <script>alert(1)</script>"
+
 
 def test_json_embutido_preserva_caracteres_especiais_sem_escapar():
     condominio = _condo(razao_social='Solar & Cia "Palmeiras" <Torre>')
